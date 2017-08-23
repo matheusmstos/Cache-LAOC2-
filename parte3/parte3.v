@@ -33,14 +33,14 @@ module conj_ass2vias( input clock,
 	
 	assign valid[0] = 	 	cache[index_input][0][11];
 	assign valid[1] = 	 	cache[index_input][1][11];
-	assign lru[0] =  		 	cache[index_input][0][10];
-	assign lru[1] = 		 	cache[index_input][1][10];
+	assign lru[0] =  		cache[index_input][0][10];
+	assign lru[1] = 		cache[index_input][1][10];
 	assign dirty[0] = 	 	cache[index_input][0][9];
 	assign dirty[1] = 	 	cache[index_input][1][9];
 	assign tag_cache[0] = 	cache[index_input][0][8:5];
 	assign tag_cache[1] = 	cache[index_input][1][8:5];
-	//assign index[0] = 	   cache[index_input][0][4];
-	//assign index[1] = 	   cache[index_input][1][4];
+	//assign index[0] = 	cache[index_input][0][4];
+	//assign index[1] = 	cache[index_input][1][4];
 	assign bloco_cache[0] = cache[index_input][0][4:0];
 	assign bloco_cache[1] = cache[index_input][1][4:0];
 	
@@ -48,12 +48,14 @@ module conj_ass2vias( input clock,
 	
 		//INICIALIZAÇÃO DOS CONJUNTOS 
 	
-		//([11]validade, [10]lru, [9]dirty, [8:5]tag, [3:0]bloco)
-		cache[0][0] = 12'b 1 0 0 1000 000; //tag = , valor = 
-		cache[0][1] = 12'b 1 0 0 1011 001; //tag = , valor = 
+		//([11]validade, [10]lru, [9]dirty, [8:5]tag, [4:0]bloco)
+		cache[0][0] = 12'b 1 0 0 0000 00000; //tag = 0000 , valor = 00000(0)
+		cache[0][1] = 12'b 1 0 0 0001 00001; //tag = 0000 , valor = 00001(1)
 		
-		cache[1][0] = 12'b 1 0 0 1000 010; //tag = , valor = 
-		cache[1][1] = 12'b 1 0 0 1011 011; //tag = , valor = 
+		cache[1][0] = 12'b 1 0 0 0010 00010; //tag = 0010 , valor = 00010(2)
+		cache[1][1] = 12'b 1 0 0 0011 00011; //tag = 0011 , valor = 00011(3)
+		
+		//cache[index][via]
 		
 		solicitacao_de_escrita_na_memoria = 1'b0;
 		solicitacao_de_leitura_na_memoria = 1'b0;
