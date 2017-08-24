@@ -1,17 +1,18 @@
 module cache_totalmente_associativa(input solicitacao_anterior_de_escrita_na_cache,
-												input [7:0] bloco_lido_da_memoria,
-												input clock1,
-												input Reset, //reseta dados da cache para dados padrão
-												input [4:0] tag_input,
-												input [7:0] bloco_a_ser_escrito_na_cache,
-												input write, //0-lê  1-escreve
+												
+    input [7:0] bloco_lido_da_memoria,
+    input clock1,
+	input Reset, //reseta dados da cache para dados padrão
+	input [4:0] tag_input,
+	input [7:0] bloco_a_ser_escrito_na_cache,
+	input write, //0-lê  1-escreve
 
-												output reg [7:0] bloco_lido_da_cache,
-												output reg [7:0] bloco_a_ser_escrito_na_memoria,
-												output reg [4:0] tag_de_acesso_na_memoria,
-												output reg solicitacao_de_escrita_na_memoria,
-												output reg solicitacao_de_leitura_na_memoria,
-												output reg hit);
+	output reg [7:0] bloco_lido_da_cache,
+	output reg [7:0] bloco_a_ser_escrito_na_memoria,
+	output reg [4:0] tag_de_acesso_na_memoria,
+	output reg solicitacao_de_escrita_na_memoria,
+	output reg solicitacao_de_leitura_na_memoria,
+	output reg hit);
 
 reg[15:0] cache[1:0];
 
@@ -62,13 +63,13 @@ end
 
 //OPERACAO DE ESCRITA
 else if(write) begin								
-	if(valid[0]==0 && valid[1]==0) begin								//quando os dois blocos são inválidos
+	if(valid[0]==0 && valid[1]==0) begin	//quando os dois blocos são inválidos
 		acessado = 1'b0;		
 		hit=1'b0;
 	end
 	
-	else begin 																	//quando há um dos blocos validos
-		if(tag_cache[0] == tag_input && valid[0] == 1) begin 		//quando acertamos a tag na chace[0]
+	else begin 													//quando há um dos blocos validos
+		if(tag_cache[0] == tag_input && valid[0] == 1) begin 	//quando acertamos a tag na chace[0]
 			acessado = 1'b0;
 			hit=1'b1;
 		end
@@ -78,20 +79,21 @@ else if(write) begin
 			hit=1'b1;
 		end
 		
-		else begin 																//quando não contem o endereço(tag)
+		else begin 	//quando não contem o endereço(tag)
 			hit=1'b0;
-			if(lru[0] == 1'b0) begin										//caso o primeiro bloco seja o mais antigo (lru=0)
+			
+			if(lru[0] == 1'b0) begin	//caso o primeiro bloco seja o mais antigo (lru=0)
 				acessado = 1'b0;
 			end
 			
-			else begin															//caso o segundo bloco seja o mais antigo (lru=0)
+			else begin	//caso o segundo bloco seja o mais antigo (lru=0)
 				acessado = 1'b1;
 			end
 			
-			if(dirty[acessado] == 1'b1) begin 							//caso as duas lru´s sejam iguais a 1
+			if(dirty[acessado] == 1'b1) begin //caso as duas lru´s sejam iguais a 1
 				solicitacao_de_escrita_na_memoria = 1'b1;
-				bloco_a_ser_escrito_na_memoria = bloco_cache[acessado]; 	//atualizamos o bloco na memoria
-				tag_de_acesso_na_memoria = tag_cache[acessado];				//atualizamso a tag na memoria
+				bloco_a_ser_escrito_na_memoria = bloco_cache[acessado]; //atualizamos o bloco na memoria
+				tag_de_acesso_na_memoria = tag_cache[acessado];			//atualizamso a tag na memoria
 			end
 		end
 	end
@@ -100,41 +102,42 @@ else if(write) begin
 	cache[acessado] = {1'b1,tag_input,1'b1,1'b1,bloco_a_ser_escrito_na_cache};
 	cache[~acessado][9] = 1'b0;				
 end
-
+
+
 //OPERACAO DE LEITURA
 else begin											
-	if(valid[0]==0 && valid[1]==0) begin							//caso a leitura seja em blocos invalidos
+	if(valid[0]==0 && valid[1]==0) begin	//caso a leitura seja em blocos invalidos
 		hit=1'b0;
 		acessado = 1'b0;	
-		solicitacao_de_leitura_na_memoria = 1'b1;					//solicitamos a leitura na memoria
-		tag_de_acesso_na_memoria = tag_cache[acessado]; 				//trazemos a tag da memoria
-		cache[acessado][15] = 1'b1;									//atualizamos o valid
-		cache[acessado][8] = 1'b0; 									//atualizamos o dirty
+		solicitacao_de_leitura_na_memoria = 1'b1;			//solicitamos a leitura na memoria
+		tag_de_acesso_na_memoria = tag_cache[acessado]; 	//trazemos a tag da memoria
+		cache[acessado][15] = 1'b1;							//atualizamos o valid
+		cache[acessado][8] = 1'b0; 							//atualizamos o dirty
 	end		
 	
 	else begin
 		if(tag_cache[0] == tag_input && valid[0] == 1) begin 	//caso contenha a tag requisitada na chace[0]
 			acessado = 1'b0;
-			bloco_lido_da_cache = bloco_cache[acessado]; 				//apenas realizamos a leitura
+			bloco_lido_da_cache = bloco_cache[acessado]; 		//apenas realizamos a leitura
 			hit=1'b1;
 		end
 		
 		else if(tag_cache[1] == tag_input && valid[1] == 1) begin //caso contenha a tag requisitada na chace[1]
 			acessado = 1'b1;
-			bloco_lido_da_cache = bloco_cache[acessado];						//realizamos a leitura
+			bloco_lido_da_cache = bloco_cache[acessado];		//realizamos a leitura
 			hit=1'b1;
 		end
 		
-		else begin															//caso nao contem a tag requisitada em nenhum dos blocos da cache
+		else begin	//caso nao contem a tag requisitada em nenhum dos blocos da cache
 			hit=1'b0;
-			if(lru[0] == 1'b0) begin									//lru[0] = 0, dado mais antigo pra ser substituido
+			if(lru[0] == 1'b0) begin	//lru[0] = 0, dado mais antigo pra ser substituido
 				acessado = 1'b0;
 			end
-			else begin														//lru[0] != 0 (sendo lru[1]=0 ou lru[1]=1, nao importa), dado mais antigo pra ser substituido
+			else begin	//lru[0] != 0 (sendo lru[1]=0 ou lru[1]=1, nao importa), dado mais antigo pra ser substituido
 				acessado = 1'b1;
 			end
 			
-			if(dirty[acessado] == 1'b1) begin 						//caso od dois blocos tenham lru = 1 ???
+			if(dirty[acessado] == 1'b1) begin 	//caso od dois blocos tenham lru = 1 ???
 				tag_de_acesso_na_memoria = tag_cache[acessado];
 				solicitacao_de_escrita_na_memoria = 1'b1;
 				bloco_a_ser_escrito_na_memoria = bloco_cache[acessado];
@@ -144,9 +147,9 @@ else begin
 			
 			//executamos sempre no caso de nao conter a tag desejada na cahce
 			solicitacao_de_leitura_na_memoria = 1'b1; 			//solicitamos leitura na mem
-			tag_de_acesso_na_memoria = tag_cache[acessado]; 			//trazemos a tag da mem
-			cache[acessado][15] = 1'b1;								//atualizamos o bit valido
-			cache[acessado][8] = 1'b0; 								//atualizamos o bit dirty
+			tag_de_acesso_na_memoria = tag_cache[acessado]; 	//trazemos a tag da mem
+			cache[acessado][15] = 1'b1;							//atualizamos o bit valido
+			cache[acessado][8] = 1'b0; 							//atualizamos o bit dirty
 		end
 		
 	end
