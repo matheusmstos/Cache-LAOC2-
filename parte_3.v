@@ -68,7 +68,7 @@ else if(write) begin
 		hit=1'b0;
 	end
 	
-	else begin 													//quando há um dos blocos validos
+	else begin 	//quando há um dos blocos validos
 		if(tag_cache[0] == tag_input && valid[0] == 1) begin 	//quando acertamos a tag na chace[0]
 			acessado = 1'b0;
 			hit=1'b1;
@@ -201,7 +201,7 @@ module parte_3 (SW, LEDR, HEX0, HEX1, HEX2, HEX3, HEX4, HEX5, HEX6, HEX7, KEY);
 	reg solicitacao_anterior_de_escrita_na_cache;
 	wire [7:0] bloco_lido_da_memoria;
 	wire clock1 = KEY[0];
-	wire reset = KEY[1]; 									//reseta dados da cache para dados padrão
+	wire reset = KEY[1]; 	//reseta dados da cache para dados padrão
 	wire [4:0] tag_input = SW[14:10];
 	wire [7:0] bloco_a_ser_escrito_na_cache = SW[7:0];
 	wire write = SW[17]; 									//0-lê  1-escreve
