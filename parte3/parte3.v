@@ -1,50 +1,30 @@
-module cache_ass2vias(
-	input clock,
-	input write; //0 = leitura
-	input [4:0]adress_input, //endereco que vem da mem
-	input [3:0] bloco_lido_da_memoria,
-	input [3:0] bloco_a_ser_escrito_na_cache,
+module cache_ass2vias (	input[4:0] Address,
+								input clock,
+								input Write,
+								input[4:0] BlockIn,
+								input[4:0] M_Block_C,
+								output reg[4:0] BlockOut,
+								output reg C_Write_M,	//sinal de acesso à memoria
+								output reg[4:0] C_Block_M,
+								output reg hit);
 
-	output reg hit;
-	output reg [7:0] bloco_lido_da_cache,
-	output reg [7:0] bloco_a_ser_escrito_na_memoria,
-	output reg [4:0] tag_de_acesso_na_memoria,
-	output reg solicitacao_de_escrita_na_memoria,
-	output reg solicitacao_de_leitura_na_memoria
-	);
+wire index = Address[0];
 
-	reg[11:0] cache[1:0][1:0]; // conjunto x via/bloco
+reg [11:0] cache[1:0][1:0]; //2 indices e 2 vias, respectivamente
 
-	reg acessado;
-	wire valid[1:0][1:0];
-	wire lru[1:0][1:0];
-	wire dirty[1:0][1:0];
-	wire [3:0] tag_cache[1:0][1:0];
-	wire [4:0] bloco_cache[1:0][1:0];
+wire      valido[1:0];
+wire      lru   [1:0];
+wire      dirty [1:0];
+wire [3:0]tag   [1:0];
+wire [4:0]bloco [1:0];
 
-	//slit do endereco input que vem da memoria
-	wire index_input;
-	wire tag_input;
-	assign index_input = adress_input[0];
-	assign tag_input = adress_input[4:1];
+assign  valido[0] = cache[index][0][11];     assign  valido[1] = cache[index][1][11];
+assign  lru   [0] = cache[index][0][10];     assign  lru   [1] = cache[index][1][10];
+assign  dirty [0] = cache[index][0][9];      assign  dirty [1] = cache[index][1][9];
+assign  tag   [0] = cache[index][0][8:5];    assign  tag   [1] = cache[index][1][8:5]; 
+assign  bloco [0] = cache[index][0][4:0];    assign  bloco [1] = cache[index][1][4:0];
 
-	//Mapeametno da cache
-	//validade.  [11]
-	//lru.       [10]
-	//dirty.     [9]
-	//tag.       [8:5]
-	//bloco.     [4:0]
-
-	assign valid[index_input][0] = 		 cache[index_input][0][11];
-	assign valid[index_input][1] = 		 cache[index_input][1][11];
-	assign lru[index_input][0] =  		 cache[index_input][0][10];
-	assign lru[index_input][1] = 		 	 cache[index_input][1][10];
-	assign dirty[index_input][0] = 	    cache[index_input][0][9];
-	assign dirty[index_input][1] = 		 cache[index_input][1][9];
-	assign tag_cache[index_input][0] =   cache[index_input][0][8:5];
-	assign tag_cache[index_input][1] = 	 cache[index_input][1][8:5];
-	assign bloco_cache[index_input][0] = cache[index_input][0][4:0];
-	assign bloco_cache[index_input][1] = cache[index_input][1][4:0];
+reg acessado,caso_especial;
 
 	initial begin
 		//INICIALIZAÇÃO DOS CONJUNTOS
@@ -57,133 +37,130 @@ module cache_ass2vias(
 		cache[1][1] = 12'b100001100011; //tag = 0011 , valor = 00011(3)
 		
 		//cache[index][via]
-		
-		solicitacao_de_escrita_na_memoria = 1'b0;
-		solicitacao_de_leitura_na_memoria = 1'b0;
-
+		caso_especial = 1'b0;
 	end
 
-	always@(posedge clock) begin
-		//>>>>ESCRITA<<<<<
-		if(write) begin
-			//caso os dois blocos sejam invalidos
-			if (valid[index_input][0] == 0 && valid[index_input][1] == 0) begin
-				acessado = 1'b0;
-				hit=1'b0;
-				
-			end
-		end
-		
-		else begin
-		  //quando acertamos a tag no bloco 0 e o bloco eh valido
-			if(tag_cache[index_input][0] == tag_input && valid[index_input][0] == 1) begin
-				acessado = 1'b0;
-				hit=1'b1;
-				
-			end
-			
-			//quando acertamos a tag no bloco 1 e o bloco eh valido
-			else if(tag_cache[index_input][1] == tag_input && valid[index_input][1] == 1) begin
-				acessado = 1'b1;
-				hit=1'b1;
-				
-			end
-			
-			//quando nao bate a tag, vamos ter que sobrescrever e atualizar na mem
-			else begin
-				hit=1'b0;
-				
-				if(lru[index_input][0] == 1'b0) begin //em qual subs? olha a lru
-					acessado = 1'b0;
-					
-				end
-				
-				else begin
-					acessado = 1'b1;
-					
-				end
-				
-				if(dirty[index_input][acessado] == 1'b1) begin //precisa dar w-back?
-					solicitacao_de_escrita_na_memoria = 1'b1;
-					bloco_a_ser_escrito_na_memoria = bloco_cache[index_input][acessado];
-					cache[index_input][acessado][11] = 1'b1; //bit de validade
-					cache[index_input][acessado][9] = 1'b0; //dirty
-					
-				end
-				
-				//atualiza {bit de validade = 1, lru = 1, dirty = 1}
-				cache[index_input][acessado] = {1'b1,1'b1,1'b1,tag_input,bloco_a_ser_escrito_na_cache}
-				cache[index_input][~acessado][10] = 1'b0; //atualiza a lru do outro bloco
-				
-			end
-			
-		end
-		
-		//>>>>LEITURA<<<<
-		else begin
-			
-			//caso os dois blocos do conjutno sejam invalidos, buscamos da memoria
-			if(valid[index_input][0] == 0 && valid[index_input][1] == 0)begin
-				hit = 1'b0;
-				acessado = 1'b0;
-				solicitacao_de_leitura_na_memoria = 1'b1;
-				tag_de_acesso_na_memoria = tag_cache[index_input][acessado];
-				cache[index_input][acessado][11] = 1'b1; //atualiza b.validade
-				cache[index_input][acessado][9] = 1'b0;  //atualiza dirty
-				
-			end
-			
-			else begin
-				//tentamos ler -> acertamos a tag na via.0 e eh um bloco valido
-				if(tag_cache[index_input][0] == tag_input && valid[index_input][0] == 1)begin
-					hit = 1'b1;
-					acessado = 1'b0;
-					bloco_lido_da_cache = bloco_cache[index_input][acessado];
-					
-				end
-				
-				//tentamos ler -> acertamos a tag na via.1 e eh um bloco valido
-				else if(tag_cache[index_input][1] == tag_input && valid[index_input][1] == 1) begin
-					hit = 1'b1;
-					acessado = 1'b1;
-					bloco_lido_da_cache = bloco_cache[index_input][acessado];
-					
-				end
-				
-				else begin //nao contem o endereco pra leitura requisitado
-					hit = 1'b0;
-					
-					if (lru[index_input][0] == 1'b0) begin
-						acessado = 1'b0;
-					 
-					end
-					
-					else begin
-						acessado = 1'b1;
-						
-					end
-					
-					if(dirty[index_input][acessado] == 1'b1) begin
-						tag_de_acesso_na_memoria = tag_cache[index_input][acessado];
-						solicitacao_de_escrita_na_memoria = 1'b1;
-						bloco_a_ser_escrito_na_memoria = bloco_cache[index_input][acessado];
-						cache[acessado][11] = 1'b1; //atualiza o b.validade
-						cache[acessado][9] = 1'b0;  //atualiza o dirty
-						
-					end
-					
-					//executamos sempre no caso de nao conter a tag desejada na cahce
-					solicitacao_de_leitura_na_memoria = 1'b1; 							//solicitamos leitura na mem
-					tag_de_acesso_na_memoria = tag_cache[index_input][acessado];   //trazemos a tag da mem
-					cache[index_input][acessado][11] = 1'b1; 	//atualiza b.validade
-					cache[index_input][acessado][9] = 1'b0;  	//atualiza dirty
-					
-				end
-			end
-			
-			//toda leitura atualiza a lru
-			cache[index_input][acessado][10] = 1'b1;
-			cache[index_input][~acessado][10] = 1'b0;
-		end
+always@(posedge clock) begin
+if(caso_especial) begin
+	cache[index][acessado][4:0] = M_Block_C;	
+	cache[index][acessado][11] = 1'b1;
+	caso_especial = 1'b0;
+end
+hit = 1'b0;
+if(Write==0) begin//leitura
+	if(tag[0] == Address[4:0] && valido[0] == 1) begin
+		acessado = 1'b0; hit = 1'b1;
 	end
+        else if(tag[1] == Address[4:0] && valido[1] == 1) begin
+		acessado = 1'b1; hit = 1'b1;
+	end
+	else begin
+	   	acessado = lru[0];
+	   	if(dirty[acessado] == 1) begin			//na via lru, dirty = 1
+			C_Write_M = 1'b1;			//manda escrever na memoria bloco atual
+			C_Block_M = bloco[acessado];
+			//C_Read_M = 1'b1;			//manda escrever bloco dirty da memoria e buscar bloco faltante nela	
+			caso_especial = 1'b1;			//quando le bloco dirty, e necessario tanto ler quanto escrever algo na memoria
+		end			
+	end
+	BlockOut = cache[index][acessado][4:0];			//le o acessado o novo bloco e atualiza lrus
+	cache[index][acessado][11] = 1'b1;
+	cache[index][~acessado][11] = 1'b0;
+end
+else begin //Write=1 escrita 
+        if(tag[0] == Address[4:0] && valido[0] == 1) begin
+		acessado = 1'b0; hit = 1'b1;	
+	end
+	else if(tag[1] == Address[4:0] && valido[1] == 1) begin
+		acessado = 1'b1; hit = 1'b1;
+	end
+	else begin
+		acessado = lru[0];
+	     	if(dirty[acessado] == 1) begin			//na via lru, dirty = 1
+			C_Write_M = 1'b1;			//manda escrever na memoria bloco atual
+			C_Block_M = bloco[acessado];
+		end
+	end			
+	cache[index][acessado][4:0] = BlockIn;			//escreve no acessado o novo bloco sinaliza valido e atualiza lrus
+	cache[index][acessado][11] = 1'b1;
+	cache[index][acessado][11] = 1'b1;
+	cache[index][~acessado][11] = 1'b0;
+end
+end
+endmodule
+
+
+
+module decod7_1(cin, cout);//transformar o binario em hexadecimal
+	input [3:0]cin;
+	output reg [0:6]cout;
+
+	always @(cin)
+	begin
+		case(cin)  //abcdefg
+		0: cout = 	7'b0000001;
+		1: cout = 	7'b1001111;
+		2: cout = 	7'b0010010;
+		3: cout = 	7'b0000110;
+		4: cout = 	7'b1001100;
+		5: cout = 	7'b0100100;
+		6: cout = 	7'b0100000;
+		7: cout = 	7'b0001111;
+		8: cout = 	7'b0000000;
+		9: cout = 	7'b0000100;
+		10: cout = 	7'b0001000; //A
+		11: cout = 	7'b1100000; //B
+		12: cout = 	7'b0110001; //C
+		13: cout = 	7'b1000010; //D
+		14: cout = 	7'b0110000; //E
+		15: cout = 	7'b0111000; //F
+		default : cout = 0;
+		endcase
+	end
+
+endmodule
+
+module parte3 (SW, LEDR, HEX0, HEX1, HEX2, HEX3, HEX4, HEX5, HEX6, HEX7, KEY);
+
+	input [17:0]SW;
+	input [1:0] KEY;
+	output [0:6] HEX0, HEX1, HEX2, HEX3, HEX4, HEX5, HEX6, HEX7;
+	output [17:0] LEDR;
+
+	wire clock_m = KEY[0];
+	wire Write = SW[17];
+	wire [4:0] Address = SW[14:10];
+	wire [4:0] BlockIn = SW[4:0]; //0-le  1-escreve
+
+	wire [4:0] BlockOut;
+	wire [4:0] C_Block_M;
+	wire [4:0] M_Block_C;
+	wire C_Write_M;
+	wire hit;
+
+	reg clock_c;
+
+	cache_ass2vias  (Address, clock_c, Write, BlockIn, M_Block_C, BlockOut, C_Write_M, C_Block_M, hit);
+
+	ramlpm MB1 (Address, C_Block_M, clock_m, C_Write_M , M_Block_C);
+
+	wire [4:0] exibir_bloco;
+
+        assign exibir_bloco[0] = (BlockOut[0] & hit) | 1'b0;
+        assign exibir_bloco[1] = (BlockOut[1] & hit) | 1'b0;
+        assign exibir_bloco[2] = (BlockOut[2] & hit) | 1'b0;
+        assign exibir_bloco[3] = (BlockOut[3] & hit) | 1'b0;
+        assign exibir_bloco[4] = (BlockOut[4] & hit) | 1'b0;       
+
+	decod7_1 d0 (Address[3:0], HEX0);
+	decod7_1 d1 ({3'b0,Address[4]}, HEX1);
+	decod7_1 d2 (exibir_bloco[3:0], HEX6);
+	decod7_1 d3 ({3'b0,exibir_bloco[4]}, HEX7);
+
+	assign LEDR[0] = hit;
+
+	always@(posedge clock_m) begin
+		clock_c = ~clock_c;
+	end
+
 endmodule
