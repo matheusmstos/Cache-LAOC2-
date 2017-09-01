@@ -11,7 +11,8 @@ module cache_ass2vias (
 	output reg hit
 	);
 
-	wire index = Address[0];
+	wire index = Address[4];
+	
 
 	reg [11:0] cache[1:0][1:0]; //2 indices e 2 vias, respectivamente
 
@@ -34,11 +35,11 @@ module cache_ass2vias (
 		//INICIALIZAÇÃO DOS CONJUNTOS
 		
 		//([11]validade, [10]lru, [9]dirty, [8:5]tag, [4:0]bloco)
-		cache[0][0] = 12'b100 0000 00000; //tag = 0000 , valor = 00000(0)
-		cache[0][1] = 12'b100 0001 00001; //tag = 0001 , valor = 00001(1)
+		cache[0][0] = 12'b100000000000; //tag = 0000 , valor = 00000(0)
+		cache[0][1] = 12'b100000100001; //tag = 0001 , valor = 00001(1)
 		
-		cache[1][0] = 12'b100 0010 00010; //tag = 0010 , valor = 00010(2)
-		cache[1][1] = 12'b100 0011 00011; //tag = 0011 , valor = 00011(3)
+		cache[1][0] = 12'b100001000010; //tag = 0010 , valor = 00010(2)
+		cache[1][1] = 12'b100001100011; //tag = 0011 , valor = 00011(3)
 		
 		//cache[index][via]
 		caso_especial = 1'b0;
@@ -53,13 +54,15 @@ module cache_ass2vias (
 			caso_especial = 1'b0;
 		end // fim caso especial
 		
-		if(Write==0) begin // leitura
-			if(tag[0] == Address[4:0] && valido[0] == 1) begin // caso exista uma tag valida
+		
+		//>>>>LEITURA<<<<
+		if(Write==0) begin 
+			if(tag[0] == Address[3:0] && valido[0] == 1) begin // caso exista uma tag valida
 				acessado = 1'b0; 
 				hit = 1'b1;
 			end 
 		
-			else if(tag[1] == Address[4:0] && valido[1] == 1) begin // caso nao exista a primeira tag, verifica a seguinte
+			else if(tag[1] == Address[3:0] && valido[1] == 1) begin // caso nao exista a primeira tag, verifica a seguinte
 				acessado = 1'b1; 
 				hit = 1'b1;
 			end
@@ -78,13 +81,15 @@ module cache_ass2vias (
 			cache[index][~acessado][10] = 1'b0; // atualizacao do lru nao acessado: vai pro mais antigo
 		end // end leitura
 		
+		
+		//>>>>ESCRITA<<<<
 		else begin // Write==1 escrita 
-			if(tag[0] == Address[4:0] && valido[0] == 1) begin // caso a tag confira
+			if(tag[0] == Address[3:0] && valido[0] == 1) begin // caso a tag confira
 				acessado = 1'b0; 
 				hit = 1'b1;	
 			end
 			
-			else if(tag[1] == Address[4:0] && valido[1] == 1) begin // caso nao confira a primeira tag, verifica a seguinte
+			else if(tag[1] == Address[3:0] && valido[1] == 1) begin // caso nao confira a primeira tag, verifica a seguinte
 				acessado = 1'b1; 
 				hit = 1'b1;
 			end
@@ -138,7 +143,7 @@ module decod7_1(cin, cout); // transformar o binario em hexadecimal
 
 endmodule // fim transformar o binario em hexadecimal
 
-module parte3 (SW, LEDR, HEX0, HEX1, HEX2, HEX3, HEX4, HEX5, HEX6, HEX7, KEY);
+module parte_1 (SW, LEDR, HEX0, HEX1, HEX2, HEX3, HEX4, HEX5, HEX6, HEX7, KEY);
 
 	input  [17:0]SW;
 	input  [1:0] KEY;
@@ -160,7 +165,7 @@ module parte3 (SW, LEDR, HEX0, HEX1, HEX2, HEX3, HEX4, HEX5, HEX6, HEX7, KEY);
 
 	cache_ass2vias C1 (Address, clock_c, Write, BlockIn, M_Block_C, BlockOut, C_Write_M, C_Block_M, hit);
 
-	ramlpm MB1 (Address, C_Block_M, clock_m, C_Write_M , M_Block_C);
+	ramlpm m1 (Address, C_Block_M, clock_m, C_Write_M , M_Block_C);
 
 	wire [4:0] exibir_bloco;
 
